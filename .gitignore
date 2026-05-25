@@ -1,0 +1,6 @@
+node_modules/
+# Base SQLite créée localement au premier démarrage
+data/
+
+.env
+

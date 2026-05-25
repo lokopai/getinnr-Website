@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Back-office — getInnr</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Caveat+Brush&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #faf9f7;
+      --fg: #0d0d0d;
+      --muted: #7a7a76;
+      --line: #e6e4df;
+      --accent: #a855f7;
+      --accent-ink: #7c3aed;
+      --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      --font-script: "Caveat Brush", "Helvetica Neue", sans-serif;
+      --maxw: 980px;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      font-size: 15px;
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent-ink); }
+    .brand {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.18em;
+      font-size: 22px;
+      line-height: 1;
+      user-select: none;
+    }
+    .brand .b-get {
+      font-family: var(--font-script);
+      color: var(--accent);
+      font-size: 0.72em;
+      transform: translateY(0.06em) rotate(-6deg);
+      margin-right: -0.15em;
+    }
+    .brand .b-innr { font-weight: 900; letter-spacing: -0.04em; }
+    .brand .b-dot {
+      width: 0.22em; height: 0.22em;
+      border-radius: 50%;
+      background: var(--accent);
+      transform: translateY(-0.05em);
+      display: inline-block;
+      margin-left: 0.04em;
+    }
+    header {
+      border-bottom: 1px solid var(--line);
+      padding: 20px;
+      background: color-mix(in oklab, var(--bg) 86%, transparent);
+      backdrop-filter: blur(14px);
+    }
+    .header-inner {
+      max-width: var(--maxw);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .muted { color: var(--muted); font-size: 13px; }
+    main {
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+    button, .btn {
+      font-family: inherit;
+      font-size: 14px;
+      border-radius: 10px;
+      padding: 10px 16px;
+      border: 1px solid var(--fg);
+      background: var(--fg);
+      color: var(--bg);
+      cursor: pointer;
+      font-weight: 500;
+    }
+    button.secondary, .btn.secondary {
+      background: transparent;
+      color: var(--fg);
+      border-color: var(--line);
+    }
+    label {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    input[type="text"], input[type="password"], textarea, select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: white;
+      font-family: inherit;
+      font-size: 14px;
+    }
+    textarea {
+      min-height: 220px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    #f-main-html { min-height: 420px; }
+    .field { margin-bottom: 16px; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .banner {
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: white;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+    .banner.err { border-color: #f87171; color: #991b1b; }
+    .banner.ok { border-color: color-mix(in oklab, var(--accent) 40%, transparent); }
+    .page-list {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: white;
+    }
+    .page-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .page-row:last-child { border-bottom: none; }
+    .slug { font-family: ui-monospace, monospace; font-size: 13px; }
+    .pill {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; margin-top: 0; }
+    .toolbar { margin: 24px 0 16px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .hidden { display: none !important; }
+    table.demo {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 12px;
+    }
+    table.demo th, table.demo td {
+      border: 1px solid var(--line);
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    table.demo th { background: color-mix(in oklab, var(--bg) 70%, white); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+    #landing-sections-mount,
+    #legal-links-mount {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: white;
+      padding: 4px 16px;
+      margin-bottom: 14px;
+    }
+    #landing-sections-mount .landing-section-row,
+    #legal-links-mount .landing-section-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px 20px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    #landing-sections-mount .landing-section-row:last-child,
+    #legal-links-mount .landing-section-row:last-child { border-bottom: none; }
+    #landing-sections-mount .landing-section-title,
+    #legal-links-mount .landing-section-title {
+      flex: 1 1 200px;
+      font-size: 14px;
+      line-height: 1.45;
+      color: var(--fg);
+    }
+    #landing-sections-mount .landing-radios,
+    #legal-links-mount .landing-radios {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    #landing-sections-mount .landing-radios label,
+    #legal-links-mount .landing-radios label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--fg);
+    }
+    #landing-sections-mount input[type="radio"],
+    #legal-links-mount input[type="radio"] {
+      accent-color: var(--accent);
+    }
+    @media (max-width: 720px) { .two { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div>
+        <span class="brand" aria-hidden="true">
+          <span class="b-get">Get</span>
+          <span class="b-innr">INNR</span>
+          <span class="b-dot"></span>
+        </span>
+        <div class="muted" style="margin-top: 6px">Back-office contenu légal et contact</div>
+      </div>
+      <div id="logout-wrap" class="hidden">
+        <button type="button" class="secondary" id="btn-logout">Déconnexion</button>
+        <a class="muted" href="index.html" style="margin-left: 12px; text-decoration: none;">Voir le site</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div id="view-login">
+      <h2>Connexion administrateur</h2>
+      <p class="muted">Identifiants définis dans le fichier <code>.env</code> (voir <code>.env.example</code>).</p>
+      <div id="login-banner" class="banner hidden"></div>
+      <form id="form-login">
+        <div class="field">
+          <label for="u">Nom d'utilisateur</label>
+          <input id="u" name="username" type="text" autocomplete="username" required />
+        </div>
+        <div class="field">
+          <label for="p">Mot de passe</label>
+          <input id="p" name="password" type="password" autocomplete="current-password" required />
+        </div>
+        <button type="submit">Se connecter</button>
+      </form>
+    </div>
+
+    <div id="view-app" class="hidden">
+      <div id="app-banner" class="banner hidden"></div>
+      <h2>Pages éditables</h2>
+      <p class="muted">Les modifications sont conservées dans la base SQLite et affichées sur le site.</p>
+
+      <div class="toolbar">
+        <label for="sel-page" class="muted" style="margin: 0;">Sélection</label>
+        <select id="sel-page"></select>
+        <button type="button" id="btn-reload-page" class="secondary">Recharger</button>
+      </div>
+
+      <div id="editor" class="hidden">
+        <div class="field">
+          <label for="f-html-title">Titre (&lt;title&gt; navigateur)</label>
+          <input id="f-html-title" type="text" />
+        </div>
+        <div class="two">
+          <div class="field">
+            <label for="f-kicker">Surtitre</label>
+            <input id="f-kicker" type="text" />
+          </div>
+          <div class="field">
+            <label for="f-h1">Titre principal (H1)</label>
+            <input id="f-h1" type="text" />
+          </div>
+        </div>
+        <div class="two">
+          <div class="field">
+            <label for="f-meta-updated">« Dernière mise à jour »</label>
+            <input id="f-meta-updated" type="text" />
+          </div>
+          <div class="field">
+            <label for="f-meta-editor">« Édité par »</label>
+            <input id="f-meta-editor" type="text" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-main-html">Contenu (un seul bloc HTML)</label>
+          <p class="muted" style="margin: -4px 0 10px; font-size: 13px; max-width: 72ch;">
+            Collez ici tout le HTML de la zone sous l’en-tête : souvent
+            <code>&lt;aside class="toc"&gt;…&lt;/aside&gt;</code> puis
+            <code>&lt;article class="doc-content"&gt;…&lt;/article&gt;</code>.
+            Sans sommaire : un seul <code>&lt;article class="doc-content"&gt;…</code>.
+          </p>
+          <textarea id="f-main-html" spellcheck="false"></textarea>
+        </div>
+        <div class="toolbar" style="margin-top: 0;">
+          <button type="button" id="btn-save">Enregistrer</button>
+          <span class="muted" id="save-meta"></span>
+        </div>
+      </div>
+
+      <hr style="border:none;border-top:1px solid var(--line); margin:40px 0 24px;" />
+
+      <h2>Page d’accueil — sections visibles</h2>
+      <p class="muted" style="max-width: 72ch;">
+        Pour chaque bloc, choisis Activé ou Désactivé, puis enregistre. Actualise la page d’accueil du site pour voir le changement.
+      </p>
+      <div id="landing-sections-mount" aria-live="polite"></div>
+      <button type="button" id="btn-save-landing">Enregistrer les sections</button>
+
+      <hr style="border:none;border-top:1px solid var(--line); margin:40px 0 24px;" />
+
+      <h2>Pied de page — liens légaux &amp; contact</h2>
+      <p class="muted" style="max-width: 72ch;">
+        Choisis quels liens apparaissent dans le pied de page (accueil et pages légales). Une page peut rester accessible par son URL même si le lien est masqué.
+      </p>
+      <div id="legal-links-mount" aria-live="polite"></div>
+      <button type="button" id="btn-save-legal-links">Enregistrer les liens</button>
+
+      <hr style="border:none;border-top:1px solid var(--line); margin:48px 0;" />
+
+      <h2>Dernières demandes de démo</h2>
+      <p class="muted">Données issues du formulaire de la landing (API <code>/api/public/demo-request</code>).</p>
+      <button type="button" class="secondary" id="btn-demo-refresh">Rafraîchir la liste</button>
+      <div id="demo-table-wrap"></div>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      async function api(path, opts) {
+        const res = await fetch(path, Object.assign({ credentials: "same-origin", headers: { "Content-Type": "application/json" } }, opts || {}));
+        const text = await res.text();
+        var data = null;
+        try { data = text ? JSON.parse(text) : null; } catch (e) { data = null; }
+        if (!res.ok) {
+          var msg = data && data.error ? data.error : ("HTTP " + res.status + " · " + text.slice(0, 200));
+          throw new Error(msg);
+        }
+        return data;
+      }
+
+      function show(el, cls, text) {
+        el.textContent = text || "";
+        el.classList.toggle("hidden", !text);
+        el.classList.remove("ok", "err");
+        if (text) el.classList.add(cls);
+      }
+
+      function esc(s) {
+        return String(s || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      var viewLogin = document.getElementById("view-login");
+      var viewApp = document.getElementById("view-app");
+      var logoutWrap = document.getElementById("logout-wrap");
+      var loginBanner = document.getElementById("login-banner");
+      var appBanner = document.getElementById("app-banner");
+      var formLogin = document.getElementById("form-login");
+      var selPage = document.getElementById("sel-page");
+      var editor = document.getElementById("editor");
+      var currentSlug = null;
+
+      function fillEditor(page) {
+        document.getElementById("f-html-title").value = page.html_title || "";
+        document.getElementById("f-kicker").value = page.kicker || "";
+        document.getElementById("f-h1").value = page.h1 || "";
+        document.getElementById("f-meta-updated").value = page.meta_updated || "";
+        document.getElementById("f-meta-editor").value = page.meta_editor || "";
+        document.getElementById("f-main-html").value = page.main_html || "";
+        document.getElementById("save-meta").textContent = page.updated_at ? "Dernière version en base · " + page.updated_at : "";
+      }
+
+      async function loadPagesList() {
+        var pages = await api("/api/admin/pages");
+        selPage.innerHTML = "";
+        pages.forEach(function (p) {
+          var opt = document.createElement("option");
+          opt.value = p.slug;
+          opt.textContent = p.slug + " — " + (p.html_title || "");
+          selPage.appendChild(opt);
+        });
+        if (!currentSlug || !pages.some(function (x) { return x.slug === currentSlug; })) {
+          currentSlug = pages[0] && pages[0].slug ? pages[0].slug : null;
+        }
+        if (currentSlug) {
+          selPage.value = currentSlug;
+          await loadPage(currentSlug);
+        } else {
+          editor.classList.add("hidden");
+        }
+      }
+
+      async function loadPage(slug) {
+        var page = await api("/api/admin/pages/" + encodeURIComponent(slug));
+        fillEditor(page);
+        editor.classList.remove("hidden");
+      }
+
+      async function refreshLandingSections() {
+        var mount = document.getElementById("landing-sections-mount");
+        if (!mount) return;
+        try {
+          var data = await api("/api/admin/landing-sections");
+          mount.innerHTML = "";
+          data.keys.forEach(function (id) {
+            var enabled = !!(data.sections && data.sections[id]);
+            var row = document.createElement("div");
+            row.className = "landing-section-row";
+            row.dataset.key = id;
+            var title = document.createElement("div");
+            title.className = "landing-section-title";
+            title.textContent = data.labels[id] || id;
+            var wrap = document.createElement("div");
+            wrap.className = "landing-radios";
+
+            [["true", "Activé"], ["false", "Désactivé"]].forEach(function (pair) {
+              var opt = pair[0];
+              var lblText = pair[1];
+              var lab = document.createElement("label");
+              var inp = document.createElement("input");
+              inp.type = "radio";
+              inp.name = "landing_section_" + id;
+              inp.value = opt;
+              inp.checked = (opt === "true" && enabled) || (opt === "false" && !enabled);
+              lab.appendChild(inp);
+              lab.appendChild(document.createTextNode(lblText));
+              wrap.appendChild(lab);
+            });
+
+            row.appendChild(title);
+            row.appendChild(wrap);
+            mount.appendChild(row);
+          });
+        } catch (e) {
+          mount.innerHTML = '<p class="muted">Sections indisponibles : ' + esc(e.message || e) + "</p>";
+        }
+      }
+
+      async function refreshLegalFooterLinks() {
+        var mount = document.getElementById("legal-links-mount");
+        if (!mount) return;
+        try {
+          var data = await api("/api/admin/legal-footer-links");
+          mount.innerHTML = "";
+          data.keys.forEach(function (id) {
+            var enabled = !!(data.links && data.links[id]);
+            var row = document.createElement("div");
+            row.className = "landing-section-row";
+            row.dataset.key = id;
+            var title = document.createElement("div");
+            title.className = "landing-section-title";
+            title.textContent = data.labels[id] || id;
+            var wrap = document.createElement("div");
+            wrap.className = "landing-radios";
+
+            [["true", "Afficher"], ["false", "Masquer"]].forEach(function (pair) {
+              var opt = pair[0];
+              var lblText = pair[1];
+              var lab = document.createElement("label");
+              var inp = document.createElement("input");
+              inp.type = "radio";
+              inp.name = "legal_footer_link_" + id;
+              inp.value = opt;
+              inp.checked = (opt === "true" && enabled) || (opt === "false" && !enabled);
+              lab.appendChild(inp);
+              lab.appendChild(document.createTextNode(lblText));
+              wrap.appendChild(lab);
+            });
+
+            row.appendChild(title);
+            row.appendChild(wrap);
+            mount.appendChild(row);
+          });
+        } catch (e) {
+          mount.innerHTML =
+            '<p class="muted">Réglages liens indisponibles : ' + esc(e.message || e) + "</p>";
+        }
+      }
+
+      async function refreshDashboard() {
+        try {
+          var me = await api("/api/auth/me");
+          if (!me.user) {
+            viewLogin.classList.remove("hidden");
+            viewApp.classList.add("hidden");
+            logoutWrap.classList.add("hidden");
+            return;
+          }
+          viewLogin.classList.add("hidden");
+          viewApp.classList.remove("hidden");
+          logoutWrap.classList.remove("hidden");
+          show(appBanner, "ok", "");
+          await loadPagesList();
+          await refreshLandingSections();
+          await refreshLegalFooterLinks();
+          await refreshDemos();
+        } catch (e) {
+          show(loginBanner, "err", String(e.message || e));
+        }
+      }
+
+      formLogin.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        show(loginBanner, "ok", "");
+        var fd = new FormData(formLogin);
+        try {
+          await api("/api/auth/login", {
+            method: "POST",
+            body: JSON.stringify({ username: fd.get("username"), password: fd.get("password") }),
+          });
+          await refreshDashboard();
+        } catch (err) {
+          show(loginBanner, "err", err.message || String(err));
+        }
+      });
+
+      document.getElementById("btn-logout").addEventListener("click", async function () {
+        await api("/api/auth/logout", { method: "POST", body: "{}" });
+        refreshDashboard();
+      });
+
+      selPage.addEventListener("change", async function () {
+        currentSlug = selPage.value;
+        if (!currentSlug) return;
+        try {
+          await loadPage(currentSlug);
+        } catch (e) {
+          show(appBanner, "err", e.message || String(e));
+        }
+      });
+
+      document.getElementById("btn-reload-page").addEventListener("click", async function () {
+        if (!currentSlug) return;
+        try {
+          await loadPage(currentSlug);
+          show(appBanner, "ok", "Page rechargée depuis la base.");
+        } catch (e) {
+          show(appBanner, "err", e.message || String(e));
+        }
+      });
+
+      document.getElementById("btn-save").addEventListener("click", async function () {
+        if (!currentSlug) return;
+        var payload = {
+          html_title: document.getElementById("f-html-title").value,
+          kicker: document.getElementById("f-kicker").value,
+          h1: document.getElementById("f-h1").value,
+          meta_updated: document.getElementById("f-meta-updated").value,
+          meta_editor: document.getElementById("f-meta-editor").value,
+          main_html: document.getElementById("f-main-html").value,
+        };
+        try {
+          var saved = await api("/api/admin/pages/" + encodeURIComponent(currentSlug), {
+            method: "PUT",
+            body: JSON.stringify(payload),
+          });
+          fillEditor(saved);
+          show(appBanner, "ok", "Enregistré.");
+        } catch (e) {
+          show(appBanner, "err", e.message || String(e));
+        }
+      });
+
+      document.getElementById("btn-save-landing").addEventListener("click", async function () {
+        var mount = document.getElementById("landing-sections-mount");
+        if (!mount) return;
+        var sections = {};
+        mount.querySelectorAll(".landing-section-row[data-key]").forEach(function (row) {
+          var key = row.dataset.key;
+          var sel = row.querySelector('input[type="radio"]:checked');
+          sections[key] = sel ? sel.value === "true" : true;
+        });
+        try {
+          await api("/api/admin/landing-sections", {
+            method: "PUT",
+            body: JSON.stringify({ sections: sections }),
+          });
+          await refreshLandingSections();
+          show(appBanner, "ok", "Sections d’accueil enregistrées. Actualise la page publique pour vérifier.");
+        } catch (e) {
+          show(appBanner, "err", e.message || String(e));
+        }
+      });
+
+      document.getElementById("btn-save-legal-links").addEventListener("click", async function () {
+        var mount = document.getElementById("legal-links-mount");
+        if (!mount) return;
+        var links = {};
+        mount.querySelectorAll(".landing-section-row[data-key]").forEach(function (row) {
+          var key = row.dataset.key;
+          var sel = row.querySelector('input[type="radio"]:checked');
+          links[key] = sel ? sel.value === "true" : true;
+        });
+        try {
+          await api("/api/admin/legal-footer-links", {
+            method: "PUT",
+            body: JSON.stringify({ links: links }),
+          });
+          await refreshLegalFooterLinks();
+          show(
+            appBanner,
+            "ok",
+            "Liens pied de page enregistrés. Actualise une page du site pour vérifier."
+          );
+        } catch (e) {
+          show(appBanner, "err", e.message || String(e));
+        }
+      });
+
+      async function refreshDemos() {
+        var wrap = document.getElementById("demo-table-wrap");
+        try {
+          var rows = await api("/api/admin/demo-requests");
+          if (!rows.length) {
+            wrap.innerHTML = "<p class=\"muted\">Aucune demande enregistrée pour le moment.</p>";
+            return;
+          }
+          var th = "<thead><tr><th>Date</th><th>Nom</th><th>Email</th><th>Studio</th><th>Tél.</th><th>Message</th></tr></thead>";
+          var tb = rows.map(function (r) {
+            return "<tr><td>" + (r.created_at || "") + "</td><td>" + esc(r.nom) + "</td><td>" + esc(r.email) +
+              "</td><td>" + esc(r.studio) + "</td><td>" + esc(r.telephone || "") +
+              "</td><td>" + esc(r.message || "").replace(/\n/g, "<br/>") + "</td></tr>";
+          }).join("");
+          wrap.innerHTML = "<table class=\"demo\">" + th + "<tbody>" + tb + "</tbody></table>";
+        } catch (e) {
+          wrap.innerHTML = "<p class=\"muted\">Liste indisponible : " + esc(e.message) + "</p>";
+        }
+      }
+
+      document.getElementById("btn-demo-refresh").addEventListener("click", refreshDemos);
+
+      refreshDashboard();
+    })();
+  </script>
+</body>
+</html>
