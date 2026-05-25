@@ -43,6 +43,21 @@ En plus du frontal HTML/React décrit ci‑après, ce dépôt inclut **`server/`
 
 Pour le développement : copier `.env.example` vers `.env`, définir un mot de passe admin solide et `SESSION_SECRET`.
 
+### Déploiement Vercel
+
+Le projet inclut **`vercel.json`** + **`api/index.js`** (Express via `serverless-http`). Étapes :
+
+1. Importer le dépôt sur [vercel.com](https://vercel.com) ou lancer depuis la racine : **`npx vercel`** puis **`npx vercel --prod`**.
+2. L’entrée **`api/index.js`** exporte directement l’app Express ; **`vercel.json`** réécrit toutes les routes vers cette fonction (`includeFiles` embarque les `.html`, JS/JSX racine, `assets/` et `server/legal-defaults/` pour le seed SQLite).
+2. Dans **Project → Settings → Environment Variables** (Production + Preview selon vos besoins), définir au minimum :
+   - **`SESSION_SECRET`** — chaîne longue et aléatoire (sessions admin).
+   - **`ADMIN_USERNAME`** / **`ADMIN_PASSWORD`** — connexion à `admin.html`.
+   - **`DATABASE_PATH`** — **`/tmp/site.db`** (recommandé). Sur les déploiements Vercel, si la variable est absente, **`/tmp/site.db`** est utilisée par défaut.
+
+**Limite importante :** plusieurs instances peuvent être démarrées ; la SQLite dans `/tmp` n’est **pas partagée** entre elles ni durable dans le temps. Sessions admin et données peuvent sembler intermittentes. Pour un back-office sérieux sur le long terme, prévoir un hébergement avec disque persistant (VPS, Railway, Fly.io…) ou une base externe.
+
+Le back-office est à l’URL du site avec le suffixe **`/admin.html`** (par ex. `https://nom-du-projet.vercel.app/admin.html`).
+
 ---
 
 ## Arborescence (fichiers initiaux + extensions)
