@@ -10,17 +10,26 @@ const { getSeedPageRows, stripScripts } = require("./seed");
 
 function poolConfig() {
   const connectionString = String(process.env.DATABASE_URL || "").trim();
-  if (!connectionString) throw new Error("DATABASE_URL vide");
+  if (!connectionString) {
+    throw new Error("DATABASE_URL PostgreSQL requis. Exemple: postgresql://user:pass@host:5432/db");
+  }
+  if (!connectionString.startsWith("postgres://") && !connectionString.startsWith("postgresql://")) {
+    throw new Error(`DATABASE_URL invalide: ${connectionString.substring(0, 20)}... (doit commencer par postgresql://)`);
+  }
+  
   const ssl =
     String(process.env.DATABASE_SSL || "").toLowerCase() === "true" ||
     String(process.env.PGSSLMODE || "").toLowerCase() === "require";
+  
+  console.log(`[PG] Connexion à: ${connectionString.replace(/:\/\/[^@]+@/, "://***@")}`);
+  
   return {
     connectionString,
     ssl: ssl ? { rejectUnauthorized: false } : undefined,
-    max: Math.min(Number(process.env.PGPOOL_MAX || 3), 10), // Réduit pour Vercel
-    connectionTimeoutMillis: 10000,
+    max: Math.min(Number(process.env.PGPOOL_MAX || 3), 10),
+    connectionTimeoutMillis: 15000,
     idleTimeoutMillis: 30000,
-    query_timeout: 20000,
+    query_timeout: 25000,
   };
 }
 
@@ -123,13 +132,29 @@ async function ensureAdminPg(client, username, plainPassword) {
 }
 
 async function createPgStore() {
-  const pool = new Pool(poolConfig());
+  const config = poolConfig();
+  const pool = new Pool(config);
   
-  // Test de connexion
+  // Test de connexion avec timeout
   console.log("[PG] Test de connexion...");
-  const testClient = await pool.connect();
-  testClient.release();
-  console.log("[PG] Connexion OK");
+  let testClient;
+  try {
+    // Ajouter un timeout manuel pour éviter les blocages
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error("Timeout connexion (15s)")), 15000)
+    );
+    
+    testClient = await Promise.race([
+      pool.connect(),
+      timeoutPromise
+    ]);
+    
+    testClient.release();
+    console.log("[PG] Connexion OK");
+  } catch (err) {
+    console.error(`[PG] Échec connexion: ${err.message}`);
+    throw new Error(`Connexion PostgreSQL échouée: ${err.message}`);
+  }
   
   await runSchema(pool);
   
