@@ -5,7 +5,7 @@
   "functions": {
     "api/index.js": {
       "maxDuration": 60,
-      "includeFiles": "{*.{html,jsx,js},assets/**,server/legal-defaults/**/*.html}"
+      "includeFiles": "{*.{html,jsx,js},assets/**,server/legal-defaults/**/*.html,server/**/*.sql}"
     }
   }
 }

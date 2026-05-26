@@ -70,6 +70,8 @@ module.exports = {
   LEGAL_LINK_LABELS_FR,
   SITE_KV_KEY,
   defaultLegalFooterLinks,
+  coerceLegalFooterLinks,
+  parseLegalFooterLinksStored: parseStored,
   getLegalFooterLinks,
   upsertLegalFooterLinks,
 };

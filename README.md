@@ -12,51 +12,56 @@ Landing page institutionnelle pour **getInnr**, logiciel de gestion pour studios
 - HTML5 + CSS3 (variables CSS, color-mix, grid, container queries)
 - **React 18.3.1** + **Babel Standalone 7.29.0** chargés via CDN (unpkg)
 - JSX inline (pas de bundler) — fichiers livrés tels quels
-- Pas de framework CSS côté front ; **dépendances npm** limitées au serveur (Express, SQLite — voir « Serveur »)
+- Pas de framework CSS côté front ; **dépendances npm** côté serveur : Express, **SQLite** (option local) ou **PostgreSQL** via `pg` si `DATABASE_URL` est défini (voir « Serveur »)
 
-**Choix volontaire (front) :** la landing fonctionne encore sans bundler lorsque tout est chargé depuis un serveur ; les pages légales et le formulaire nécessitent le **serveur Node** ci‑dessous pour SQLite et les API.
+**Choix volontaire (front) :** la landing fonctionne encore sans bundler lorsque tout est chargé depuis un serveur ; les pages légales et le formulaire nécessitent le **serveur Node** ci‑dessous pour la persistance et les API.
 
 ---
 
-## Serveur (SQLite — back-office + contenu dynamique)
+## Serveur (Express — back-office + contenu dynamique)
 
 En plus du frontal HTML/React décrit ci‑après, ce dépôt inclut **`server/`** :
 
-- **`npm install`** puis **`npm start`** (voir `.env.example` : utilisateur admin, secret de cookie, mot de passe). Au **redémarrage**, le hash du compte `ADMIN_USERNAME` est **mis à jour** pour correspondre à `ADMIN_PASSWORD` (connexion après changement de `.env`).
-- Une base **SQLite** est créée sous `DATABASE_PATH` (voir `.env`, par défaut `data/site.db`) au premier démarrage. Pour tester en mémoire, utilisez **`DATABASE_PATH=:memory:`** exactement ainsi (sans chemin `./…`, autrement SQLite créait un fichier nommé littéralement `:memory:` sur le disque). Le contenu des pages **Mentions légales**, **Confidentialité / RGPD**, **CGU**, **CGV**, **Contact** est **lu et modifiable depuis** `admin.html` après connexion.
-- Dans **`admin.html`**, le texte affiché sous l’en-tête de chaque page légale est **un seul bloc HTML** à coller (typiquement `<aside class="toc">…</aside>` + `<article class="doc-content">…</article>`, ou seulement l’article si pas de sommaire). Les champs titre du navigateur, surtitre, H1 et métadonnées restent à part.
-- Le fichier **`legal-loader.js`** injecte dans les pages légales le HTML stocké en base (**à condition d’être servies par Express**, pas depuis `file://`).
-- Les demandes de démo envoyées depuis la landing sont enregistrées dans la même base (liste consultable dans le back-office).
+- **`npm install`** puis **`npm start`** (voir `.env.example` : utilisateur admin, secret de session, mot de passe). Au **redémarrage**, le hash du compte `ADMIN_USERNAME` est **mis à jour** pour correspondre à `ADMIN_PASSWORD`.
+
+### Mode persistance
+
+| Mode | Variable | Comportement |
+|------|-----------|--------------|
+| **SQLite (défaut local)** | Pas de `DATABASE_URL` | Fichier **`DATABASE_PATH`** (`./data/site.db` par défaut, ou exactement **`:memory:`** pour tests). Schéma créé par `server/db.js`. |
+| **PostgreSQL / Supabase** | **`DATABASE_URL`** = `postgres://…` ou `postgresql://…` | Connexion **`pg`**, schéma appliqué depuis **`server/pg-schema.sql`**, même seed que SQLite. Idéal pour **Supabase self‑hosted** ou tout Postgres managé. |
+
+- En **production** avec Postgres, définis aussi **`DATABASE_SSL=true`** si ton instance impose TLS avec certificat à valider côté client (souvent utile en Docker / self‑hosted).
+- **Migration** depuis un ancien `site.db` SQLite : outil type **pgloader**, export CSV + import, ou créer une base Postgres vide (le serveur repeuple les pages par défaut au premier démarrage si la table `pages` est vide).
+
+- L’authentification du back-office reste **cookies + table `sessions`** (pas besoin d’activer Supabase Auth pour ce site).
+- Le contenu des pages **Mentions**, **Confidentialité**, **CGU**, **CGV**, **Contact** est **éditable** dans `admin.html` ; le HTML est stocké en base comme avant.
+- **`legal-loader.js`** injecte le HTML des pages légales après chargement depuis l’API (toujours via le serveur Node, pas `file://`).
 
 **Arborescence complémentaire :**
 
 ```
 .
-├── package.json / server/       API Express + better-sqlite3
-├── server/legal-defaults/       HTML initial (mentions, confidentialité, CGU) issu du zip source
-├── legal-loader.js              Chargement client des pages légales depuis SQLite
-├── admin.html                   Back-office administrateur (édition HTML + liste démos)
-├── cgv.html / contact.html      Pages alignées charte légal (nouvelles URLs)
-├── data/site.db                  Base SQLite (généré au premier démarrage, gitignoré)
+├── package.json / server/       Express + couche « store » (SQLite ou Postgres)
+├── server/pg-schema.sql          DDL PostgreSQL (bootstrap auto si DATABASE_URL)
+├── server/legal-defaults/        HTML initial pour le seed
+├── legal-loader.js               Chargement client des pages légales
+├── admin.html                    Back-office
+├── data/site.db                  SQLite local (gitignoré, si pas de DATABASE_URL)
 
 ```
 
-Pour le développement : copier `.env.example` vers `.env`, définir un mot de passe admin solide et `SESSION_SECRET`.
+Pour le développement : copier `.env.example` vers `.env`. En local sans `DATABASE_URL`, la base SQLite sous `DATABASE_PATH` suffit. Pour **Supabase self‑hosted**, récupère l’URI Postgres (port 5432) dans les paramètres du projet → **`DATABASE_URL=postgresql://…`** (et **`DATABASE_SSL=true`** si besoin).
 
 ### Déploiement Vercel
 
-Le projet inclut **`vercel.json`** + **`api/index.js`** (Express via `serverless-http`). Étapes :
+1. **`npx vercel`** puis **`npx vercel --prod`**, ou import Git depuis le dashboard.
+2. **`api/index.js`** initialise le store puis sert **`buildApp(store)`**.
+3. Variables d’environnement : **`SESSION_SECRET`**, **`ADMIN_USERNAME`**, **`ADMIN_PASSWORD`**.
+   - Pour une prod fiable avec plusieurs instances : définit **`DATABASE_URL`** vers ton Postgres (**Supabase** ou autre) au lieu de compter sur une SQLite sous `/tmp`.
+   - Si tu restes en SQLite sans `DATABASE_URL` sur Vercel : comportement précédent (fichier sous `/tmp` par défaut, non partagé entre instances).
 
-1. Importer le dépôt sur [vercel.com](https://vercel.com) ou lancer depuis la racine : **`npx vercel`** puis **`npx vercel --prod`**.
-2. L’entrée **`api/index.js`** exporte directement l’app Express ; **`vercel.json`** réécrit toutes les routes vers cette fonction (`includeFiles` embarque les `.html`, JS/JSX racine, `assets/` et `server/legal-defaults/` pour le seed SQLite).
-2. Dans **Project → Settings → Environment Variables** (Production + Preview selon vos besoins), définir au minimum :
-   - **`SESSION_SECRET`** — chaîne longue et aléatoire (sessions admin).
-   - **`ADMIN_USERNAME`** / **`ADMIN_PASSWORD`** — connexion à `admin.html`.
-   - **`DATABASE_PATH`** — **`/tmp/site.db`** (recommandé). Sur les déploiements Vercel, si la variable est absente, **`/tmp/site.db`** est utilisée par défaut.
-
-**Limite importante :** plusieurs instances peuvent être démarrées ; la SQLite dans `/tmp` n’est **pas partagée** entre elles ni durable dans le temps. Sessions admin et données peuvent sembler intermittentes. Pour un back-office sérieux sur le long terme, prévoir un hébergement avec disque persistant (VPS, Railway, Fly.io…) ou une base externe.
-
-Le back-office est à l’URL du site avec le suffixe **`/admin.html`** (par ex. `https://nom-du-projet.vercel.app/admin.html`).
+Le back-office est à l’URL du site : **`/admin.html`**.
 
 ---
 

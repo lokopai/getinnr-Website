@@ -71,6 +71,8 @@ module.exports = {
   SECTION_KEYS,
   LABELS_FR,
   defaultLandingSections,
+  coerceLandingSections,
+  parseLandingSectionsStored: parseStored,
   getLandingSections,
   upsertLandingSections,
 };

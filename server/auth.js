@@ -6,65 +6,59 @@ function generateToken() {
   return crypto.randomBytes(32).toString("hex");
 }
 
-function requireAuth(db) {
-  return (req, res, next) => {
-    const token = req.cookies?.session;
-    if (!token) {
-      res.status(401).json({ error: "Non authentifié" });
-      return;
-    }
-    const now = Date.now();
-    const row = db
-      .prepare(
-        `
-      SELECT s.admin_id AS id, a.username
-      FROM sessions s
-      JOIN admins a ON a.id = s.admin_id
-      WHERE s.token = ? AND s.expires_at > ?
-    `
-      )
-      .get(token, now);
+function cookieSecure() {
+  return (
+    process.env.NODE_ENV === "production" ||
+    String(process.env.COOKIE_SECURE || "").toLowerCase() === "true"
+  );
+}
 
-    if (!row) {
-      res.status(401).json({ error: "Session expirée" });
-      return;
+/** Middleware : store SQLite ou Postgres. */
+function requireAuth(store) {
+  return async (req, res, next) => {
+    try {
+      const token = req.cookies?.session;
+      if (!token) {
+        res.status(401).json({ error: "Non authentifié" });
+        return;
+      }
+      const row = await store.getSessionAdmin(token, Date.now());
+      if (!row) {
+        res.status(401).json({ error: "Session expirée" });
+        return;
+      }
+      req.admin = { id: row.id, username: row.username };
+      next();
+    } catch (e) {
+      next(e);
     }
-
-    req.admin = { id: row.id, username: row.username };
-    next();
   };
 }
 
-function createSession(db, adminId, res) {
+async function attachSession(store, adminId, res) {
   const token = generateToken();
   const expiresAt = Date.now() + SESSION_MAX_AGE_MS;
-  db.prepare(`INSERT INTO sessions (token, admin_id, expires_at) VALUES (?, ?, ?)`).run(
-    token,
-    adminId,
-    expiresAt
-  );
-
-  const secure =
-    process.env.NODE_ENV === "production" ||
-    String(process.env.COOKIE_SECURE || "").toLowerCase() === "true";
+  await store.saveSession(token, adminId, expiresAt);
+  await store.deleteExpiredSessions(Date.now());
 
   res.cookie("session", token, {
     httpOnly: true,
     sameSite: "lax",
-    secure,
+    secure: cookieSecure(),
     maxAge: SESSION_MAX_AGE_MS,
     path: "/",
   });
-
-  db.prepare(`DELETE FROM sessions WHERE expires_at < ?`).run(Date.now());
 }
 
-function destroySession(db, req, res) {
+async function clearSession(store, req, res) {
   const token = req.cookies?.session;
-  if (token) {
-    db.prepare(`DELETE FROM sessions WHERE token = ?`).run(token);
-  }
+  if (token) await store.deleteSession(token);
   res.clearCookie("session", { path: "/" });
 }
 
-module.exports = { requireAuth, createSession, destroySession };
+module.exports = {
+  SESSION_MAX_AGE_MS,
+  requireAuth,
+  attachSession,
+  clearSession,
+};

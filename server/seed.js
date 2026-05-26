@@ -128,6 +128,54 @@ function ensureAdmin(db, username, password) {
   db.prepare(`UPDATE admins SET password_hash = ? WHERE id = ?`).run(hash, row.id);
 }
 
+/** Lignes à insérer au premier bootstrap (PostgreSQL ou SQLite). */
+function getSeedPageRows() {
+  const rows = [];
+  const files = [
+    ["mentions-legales.html", "mentions-legales"],
+    ["confidentialite.html", "confidentialite"],
+    ["cgu.html", "cgu"],
+  ];
+
+  for (const [file, slug] of files) {
+    const shell = fs.readFileSync(path.join(ROOT, file), "utf8");
+    const header = parsePageHeader(shell, slug);
+    const mainPath = path.join(__dirname, "legal-defaults", `${slug}-main.html`);
+    const raw = fs.readFileSync(mainPath, "utf8");
+    const main_html = stripScripts(raw.trim());
+    if (!main_html || main_html.length < 400) {
+      throw new Error(
+        `[seed] Contenu légal trop court pour slug=${slug}. Fichier attendu (${mainPath}, ${raw.length} octets lus). Copie échouée depuis le zip ou fichier manquant.`
+      );
+    }
+    rows.push({ ...header, layout: "legal", main_html });
+  }
+
+  rows.push({
+    slug: "cgv",
+    html_title: "Conditions Générales de Vente — getInnr",
+    kicker: "CGV",
+    h1: "Conditions Générales de Vente",
+    meta_updated: "25 mai 2026",
+    meta_editor: "getInnr",
+    layout: "legal",
+    main_html: buildMainHtml("legal", CGV_TOC_INNER, CGV_TEMPLATE.trim()),
+  });
+
+  rows.push({
+    slug: "contact",
+    html_title: "Contact — getInnr",
+    kicker: "Contact",
+    h1: "Nous écrire",
+    meta_updated: "25 mai 2026",
+    meta_editor: "getInnr",
+    layout: "simple",
+    main_html: buildMainHtml("simple", null, CONTACT_TEMPLATE.trim()),
+  });
+
+  return rows;
+}
+
 function seedPages(db) {
   const count = db.prepare("SELECT COUNT(*) AS c FROM pages").get().c;
   if (count > 0) return;
@@ -143,47 +191,9 @@ function seedPages(db) {
   `);
 
   const runTx = db.transaction(() => {
-    const files = [
-      ["mentions-legales.html", "mentions-legales"],
-      ["confidentialite.html", "confidentialite"],
-      ["cgu.html", "cgu"],
-    ];
-
-    for (const [file, slug] of files) {
-      const shell = fs.readFileSync(path.join(ROOT, file), "utf8");
-      const header = parsePageHeader(shell, slug);
-      const mainPath = path.join(__dirname, "legal-defaults", `${slug}-main.html`);
-      const raw = fs.readFileSync(mainPath, "utf8");
-      const main_html = stripScripts(raw.trim());
-      if (!main_html || main_html.length < 400) {
-        throw new Error(
-          `[seed] Contenu légal trop court pour slug=${slug}. Fichier attendu (${mainPath}, ${raw.length} octets lus). Copie échouée depuis le zip ou fichier manquant.`
-        );
-      }
-      insert.run({ ...header, layout: "legal", main_html });
+    for (const row of getSeedPageRows()) {
+      insert.run(row);
     }
-
-    insert.run({
-      slug: "cgv",
-      html_title: "Conditions Générales de Vente — getInnr",
-      kicker: "CGV",
-      h1: "Conditions Générales de Vente",
-      meta_updated: "25 mai 2026",
-      meta_editor: "getInnr",
-      layout: "legal",
-      main_html: buildMainHtml("legal", CGV_TOC_INNER, CGV_TEMPLATE.trim()),
-    });
-
-    insert.run({
-      slug: "contact",
-      html_title: "Contact — getInnr",
-      kicker: "Contact",
-      h1: "Nous écrire",
-      meta_updated: "25 mai 2026",
-      meta_editor: "getInnr",
-      layout: "simple",
-      main_html: buildMainHtml("simple", null, CONTACT_TEMPLATE.trim()),
-    });
   });
 
   runTx();
@@ -191,7 +201,9 @@ function seedPages(db) {
 
 module.exports = {
   seedPages,
+  getSeedPageRows,
   ensureAdmin,
   stripScripts,
   buildMainHtml,
+  parsePageHeader,
 };

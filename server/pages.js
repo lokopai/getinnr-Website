@@ -1,3 +1,7 @@
+function normalizeSqlValue(v) {
+  return v instanceof Date ? v.toISOString() : v;
+}
+
 function legacyMainHtml(row) {
   const content = row.content_html || "";
   const toc = row.toc_html ? String(row.toc_html).trim() : "";
@@ -21,7 +25,7 @@ function rowToPublic(row) {
     meta_updated: row.meta_updated,
     meta_editor: row.meta_editor,
     main_html: main,
-    updated_at: row.updated_at,
+    updated_at: normalizeSqlValue(row.updated_at),
   };
 }
 
@@ -35,7 +39,13 @@ function listPages(db) {
     .prepare(
       `SELECT slug, html_title, kicker, updated_at FROM pages ORDER BY slug ASC`
     )
-    .all();
+    .all()
+    .map((r) => ({
+      slug: r.slug,
+      html_title: r.html_title,
+      kicker: r.kicker,
+      updated_at: normalizeSqlValue(r.updated_at),
+    }));
 }
 
-module.exports = { rowToPublic, getPage, listPages };
+module.exports = { rowToPublic, normalizeSqlValue, getPage, listPages };
