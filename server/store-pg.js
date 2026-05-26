@@ -17,19 +17,30 @@ function poolConfig() {
   return {
     connectionString,
     ssl: ssl ? { rejectUnauthorized: false } : undefined,
-    max: Math.min(Number(process.env.PGPOOL_MAX || 10), 32),
+    max: Math.min(Number(process.env.PGPOOL_MAX || 3), 10), // Réduit pour Vercel
+    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: 30000,
+    query_timeout: 20000,
   };
 }
 
 async function runSchema(pool) {
-  const sqlPath = path.join(__dirname, "pg-schema.sql");
-  const raw = fs.readFileSync(sqlPath, "utf8");
-  const parts = raw
-    .split(";")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-  for (const statement of parts) {
-    await pool.query(statement);
+  try {
+    const sqlPath = path.join(__dirname, "pg-schema.sql");
+    const raw = fs.readFileSync(sqlPath, "utf8");
+    const parts = raw
+      .split(";")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0 && !s.startsWith("--"));
+    
+    console.log(`[PG] Exécution de ${parts.length} statements DDL`);
+    for (const statement of parts) {
+      await pool.query(statement);
+    }
+    console.log("[PG] Schéma appliqué avec succès");
+  } catch (error) {
+    console.error("[PG] Erreur schéma:", error.message);
+    throw error;
   }
 }
 
@@ -113,7 +124,15 @@ async function ensureAdminPg(client, username, plainPassword) {
 
 async function createPgStore() {
   const pool = new Pool(poolConfig());
+  
+  // Test de connexion
+  console.log("[PG] Test de connexion...");
+  const testClient = await pool.connect();
+  testClient.release();
+  console.log("[PG] Connexion OK");
+  
   await runSchema(pool);
+  
   const client = await pool.connect();
   try {
     await ensureSiteKvDefaults(client);
@@ -123,6 +142,7 @@ async function createPgStore() {
       process.env.ADMIN_USERNAME || "admin",
       process.env.ADMIN_PASSWORD || "changeme"
     );
+    console.log("[PG] Initialisation terminée");
   } finally {
     client.release();
   }
