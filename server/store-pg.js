@@ -34,22 +34,47 @@ function poolConfig() {
 }
 
 async function runSchema(pool) {
+  const client = await pool.connect();
   try {
+    // Vérifier si les tables existent déjà
+    const tablesCheck = await client.query(`
+      SELECT table_name FROM information_schema.tables 
+      WHERE table_schema = 'public' AND table_name IN ('admins', 'sessions', 'pages', 'demo_requests', 'site_kv')
+    `);
+    
+    if (tablesCheck.rows.length >= 5) {
+      console.log(`[PG] Schéma déjà présent (${tablesCheck.rows.length} tables)`);
+      return;
+    }
+    
+    console.log(`[PG] Création schéma (${tablesCheck.rows.length}/5 tables présentes)`);
+    
     const sqlPath = path.join(__dirname, "pg-schema.sql");
+    
+    if (!fs.existsSync(sqlPath)) {
+      throw new Error(`Fichier schéma introuvable: ${sqlPath}`);
+    }
+    
     const raw = fs.readFileSync(sqlPath, "utf8");
     const parts = raw
       .split(";")
       .map((s) => s.trim())
       .filter((s) => s.length > 0 && !s.startsWith("--"));
     
-    console.log(`[PG] Exécution de ${parts.length} statements DDL`);
-    for (const statement of parts) {
-      await pool.query(statement);
+    console.log(`[PG] Schéma trouvé (${raw.length} chars), ${parts.length} statements`);
+    
+    for (let i = 0; i < parts.length; i++) {
+      const statement = parts[i];
+      console.log(`[PG] Statement ${i + 1}/${parts.length}: ${statement.substring(0, 50)}...`);
+      await client.query(statement);
     }
     console.log("[PG] Schéma appliqué avec succès");
   } catch (error) {
-    console.error("[PG] Erreur schéma:", error.message);
+    console.error(`[PG] Erreur schéma: ${error.message}`);
+    console.error(`[PG] Stack:`, error.stack);
     throw error;
+  } finally {
+    client.release();
   }
 }
 
