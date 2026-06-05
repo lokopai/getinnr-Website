@@ -6,7 +6,7 @@ const bcrypt = require("bcryptjs");
 const { rowToPublic, normalizeSqlValue } = require("./pages");
 const { SECTION_KEYS, parseLandingSectionsStored } = require("./landing-sections");
 const { SITE_KV_KEY, LEGAL_LINK_KEYS, parseLegalFooterLinksStored } = require("./legal-links");
-const { getSeedPageRows, stripScripts } = require("./seed");
+const { getSeedPageRows, getContactPageRow, stripScripts } = require("./seed");
 
 function poolConfig() {
   const connectionString = String(process.env.DATABASE_URL || "").trim();
@@ -112,6 +112,72 @@ async function ensureSiteKvDefaults(client) {
   );
 }
 
+const MIGRATE_CONTACT_KV = "migrate_contact_page_v2";
+
+async function migrateContactPagePg(client) {
+  const { rows } = await client.query(`SELECT 1 AS x FROM site_kv WHERE k = $1`, [
+    MIGRATE_CONTACT_KV,
+  ]);
+  if (rows.length > 0) return;
+
+  const row = getContactPageRow();
+  const existing = await client.query(`SELECT slug FROM pages WHERE slug = 'contact'`);
+  if (existing.rows.length > 0) {
+    await client.query(
+      `
+      UPDATE pages SET
+        html_title = $1,
+        kicker = $2,
+        h1 = $3,
+        meta_updated = $4,
+        meta_editor = $5,
+        layout = $6,
+        main_html = $7,
+        updated_at = NOW()
+      WHERE slug = 'contact'
+      `,
+      [
+        row.html_title,
+        row.kicker,
+        row.h1,
+        row.meta_updated,
+        row.meta_editor,
+        row.layout,
+        row.main_html,
+      ]
+    );
+  }
+
+  const curLinks = await client.query(`SELECT v FROM site_kv WHERE k = 'legal_footer_links'`);
+  let links = {
+    "mentions-legales": true,
+    confidentialite: true,
+    cgu: true,
+    cgv: true,
+    contact: true,
+  };
+  if (curLinks.rows[0]?.v) {
+    try {
+      links = { ...links, ...JSON.parse(curLinks.rows[0].v) };
+    } catch (_) {
+      /* garde les défauts */
+    }
+  }
+  links.contact = true;
+  await client.query(
+    `
+    INSERT INTO site_kv (k, v, updated_at)
+    VALUES ('legal_footer_links', $1::text, NOW())
+    ON CONFLICT (k) DO UPDATE SET
+      v = EXCLUDED.v,
+      updated_at = NOW()
+    `,
+    [JSON.stringify(links)]
+  );
+
+  await client.query(`INSERT INTO site_kv (k, v) VALUES ($1, '1')`, [MIGRATE_CONTACT_KV]);
+}
+
 async function seedPagesPg(client) {
   const { rows } = await client.query(`SELECT COUNT(*)::int AS c FROM pages`);
   if (rows[0].c > 0) return;
@@ -188,6 +254,7 @@ async function createPgStore() {
   try {
     await ensureSiteKvDefaults(client);
     await seedPagesPg(client);
+    await migrateContactPagePg(client);
     await ensureAdminPg(
       client,
       process.env.ADMIN_USERNAME || "admin",

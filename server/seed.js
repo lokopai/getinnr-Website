@@ -86,19 +86,25 @@ const CGV_TEMPLATE = `<section id="objet">
 </section>`;
 
 const CONTACT_TEMPLATE = `
-<p>Cette page permet de faire figurer vos coordonnées officielles, visibles également dans le pied de page et les documents juridiques le cas échéant.</p>
+<p>Vous avez une question ou souhaitez en savoir plus sur getInnr&nbsp;? Nous serions ravis de vous entendre&nbsp;!</p>
 <dl>
-  <dt>E-mail général</dt>
-  <dd><a href="mailto:contact@getinnr.com">contact@getinnr.com</a></dd>
-  <dt>Données personnelles / RGPD</dt>
-  <dd><a href="mailto:privacy@getinnr.com">privacy@getinnr.com</a></dd>
-  <dt>Adresse</dt>
-  <dd><span class="placeholder">Adresse postale complète du studio / siège social</span></dd>
-  <dt>Téléphone</dt>
-  <dd><span class="placeholder">Numéro de téléphone</span></dd>
+  <dt>E-mail</dt>
+  <dd><a href="mailto:contact@getinnr.app">contact@getinnr.app</a></dd>
 </dl>
-<div class="note">Le contenu de cette page peut être modifié depuis le back-office (compte administrateur).</div>
 `;
+
+function getContactPageRow() {
+  return {
+    slug: "contact",
+    html_title: "Nous contacter — getInnr",
+    kicker: "Contact",
+    h1: "Nous contacter",
+    meta_updated: "5 juin 2026",
+    meta_editor: "getInnr",
+    layout: "simple",
+    main_html: buildMainHtml("simple", null, CONTACT_TEMPLATE.trim()),
+  };
+}
 
 const CGV_TOC_INNER = `<h4>Sommaire</h4>
     <ol>
@@ -162,16 +168,7 @@ function getSeedPageRows() {
     main_html: buildMainHtml("legal", CGV_TOC_INNER, CGV_TEMPLATE.trim()),
   });
 
-  rows.push({
-    slug: "contact",
-    html_title: "Contact — getInnr",
-    kicker: "Contact",
-    h1: "Nous écrire",
-    meta_updated: "25 mai 2026",
-    meta_editor: "getInnr",
-    layout: "simple",
-    main_html: buildMainHtml("simple", null, CONTACT_TEMPLATE.trim()),
-  });
+  rows.push(getContactPageRow());
 
   return rows;
 }
@@ -202,6 +199,7 @@ function seedPages(db) {
 module.exports = {
   seedPages,
   getSeedPageRows,
+  getContactPageRow,
   ensureAdmin,
   stripScripts,
   buildMainHtml,

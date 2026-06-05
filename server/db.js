@@ -80,6 +80,37 @@ function migrate(db) {
 
   migratePagesMainHtml(db);
   migrateSiteKv(db);
+  migrateContactPage(db);
+}
+
+const MIGRATE_CONTACT_KV = "migrate_contact_page_v2";
+
+function migrateContactPage(db) {
+  const done = db.prepare(`SELECT 1 AS x FROM site_kv WHERE k = ?`).get(MIGRATE_CONTACT_KV);
+  if (done) return;
+
+  const { getContactPageRow } = require("./seed");
+  const { upsertLegalFooterLinks } = require("./legal-links");
+  const row = getContactPageRow();
+  const existing = db.prepare(`SELECT slug FROM pages WHERE slug = 'contact'`).get();
+
+  if (existing) {
+    db.prepare(`
+      UPDATE pages SET
+        html_title = @html_title,
+        kicker = @kicker,
+        h1 = @h1,
+        meta_updated = @meta_updated,
+        meta_editor = @meta_editor,
+        layout = @layout,
+        main_html = @main_html,
+        updated_at = datetime('now')
+      WHERE slug = @slug
+    `).run(row);
+  }
+
+  upsertLegalFooterLinks(db, { contact: true });
+  db.prepare(`INSERT INTO site_kv (k, v) VALUES (?, '1')`).run(MIGRATE_CONTACT_KV);
 }
 
 function migrateSiteKv(db) {
