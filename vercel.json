@@ -1,7 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "rewrites": [{ "source": "/(.*)", "destination": "/api" }],
+  "rewrites": [
+    { "source": "/CMuse", "destination": "https://studio-contenu-wine.vercel.app/CMuse" },
+    { "source": "/CMuse/:path*", "destination": "https://studio-contenu-wine.vercel.app/CMuse/:path*" },
+    { "source": "/(.*)", "destination": "/api" }
+  ],
   "functions": {
     "api/index.js": {
       "maxDuration": 60,
