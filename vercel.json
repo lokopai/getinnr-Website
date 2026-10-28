@@ -1,9 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
+  "redirects": [
+    { "source": "/cmuse(/.*)?", "destination": "/CMuse$1", "permanent": false },
+    { "source": "/CMUSE(/.*)?", "destination": "/CMuse$1", "permanent": false }
+  ],
   "rewrites": [
     { "source": "/CMuse", "destination": "https://studio-contenu-wine.vercel.app/CMuse" },
-    { "source": "/CMuse/:path*", "destination": "https://studio-contenu-wine.vercel.app/CMuse/:path*" },
+    { "source": "/CMuse/(.*)", "destination": "https://studio-contenu-wine.vercel.app/CMuse/$1" },
     { "source": "/(.*)", "destination": "/api" }
   ],
   "functions": {
